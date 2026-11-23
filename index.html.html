@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff9e8">
+  <title>오늘 어디 가지? — 장소 추천</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #33250e;
+      --muted: #65553c;
+      --deep: #593c10;
+      --accent: #a06513;
+      --butter: #fff0b5;
+      --line: #e9d6a4;
+      --paper: #fffefa;
+      --mint: #e7f0dd;
+      --peach: #fce5d7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--ink); background: #fff9e8;
+      font: 16px/1.6 system-ui, -apple-system, sans-serif;
+      word-break: keep-all; overflow-wrap: anywhere;
+    }
+    h1, h2, h3, p { margin: 0; }
+    button { font: inherit; cursor: pointer; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .wrap { width: min(1080px, calc(100% - 48px)); margin-inline: auto; }
+    .top, .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .top { flex-wrap: wrap; padding-block: 14px; }
+    .brand { font-weight: 850; color: var(--deep); }
+    .jump, .pill, .save, .remove {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 0; min-height: 44px; border: 1px solid var(--line);
+      background: var(--paper); color: var(--deep); text-align: center;
+      font-size: .9rem; line-height: 1.35; font-weight: 750;
+    }
+    .jump, .pill { padding: 8px 14px; border-radius: 999px; }
+    .jump { text-decoration: none; }
+    .hero {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .68fr);
+      align-items: center; gap: clamp(12px, 4vw, 42px);
+      padding: clamp(22px, 5vw, 58px); min-height: 260px;
+      border-radius: 32px; border: 1px solid #ead18d;
+      background: radial-gradient(#87602129 1px, transparent 1px) 0 0 / 16px 16px,
+                  linear-gradient(125deg, #fff7d5 8%, #ffe8a1 66%, #ffedbd);
+    }
+    .eyebrow {
+      display: inline-block; padding: 4px 11px; border-radius: 999px;
+      background: #fffdf0; color: var(--deep); font-size: .78rem;
+      letter-spacing: .025em; font-weight: 800;
+    }
+    h1 { font-size: clamp(2rem, 5.5vw, 4rem); line-height: 1.13; letter-spacing: -.06em; margin-block: 10px 14px; }
+    .hero svg { display: block; width: 100%; max-width: 310px; height: auto; justify-self: center; }
+    .intro, .sub, .meta, .description, .foot { color: var(--muted); }
+    .grid {
+      display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      align-items: start; gap: 22px; margin-block: 22px;
+    }
+    .panel {
+      min-width: 0; padding: clamp(18px, 3vw, 30px); background: var(--paper);
+      border: 1px solid var(--line); border-radius: 26px; box-shadow: 0 8px 24px #6e49100d;
+    }
+    h2 { font-size: 1.35rem; line-height: 1.3; letter-spacing: -.035em; }
+    .sub { font-size: .92rem; margin-top: 6px; }
+    .categories {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px; margin-block: 20px 12px;
+    }
+    .pill { padding-inline: 6px; min-height: 48px; }
+    .pill[aria-pressed="true"], .save[aria-pressed="true"] {
+      border-color: #a37421; background: var(--butter); box-shadow: inset 0 0 0 1px #a37421;
+    }
+    .primary {
+      width: 100%; min-height: 56px; padding: 12px 16px;
+      border: 1px solid #c6912b; border-radius: 18px;
+      background: #f8d468; color: var(--ink); font-weight: 850;
+      box-shadow: 0 3px 0 #b98322;
+    }
+    .primary:active { box-shadow: none; transform: translateY(2px); }
+    @media (hover: hover) {
+      .jump:hover, .pill:not([aria-pressed="true"]):hover, .save:not([aria-pressed="true"]):hover, .remove:hover { background: #fff6d8; }
+      .primary:hover { background: #f4ca50; }
+    }
+    #result, #saved { margin-top: 18px; }
+    #favorites { scroll-margin-top: 16px; }
+    .empty {
+      display: grid; place-content: center; gap: 4px; min-height: 124px;
+      padding: 16px; border: 1px dashed #d6bd7b; border-radius: 18px;
+      text-align: center; background: #fffbec; color: var(--muted); font-size: .87rem;
+    }
+    .empty strong { color: var(--ink); font-size: 1rem; }
+    .empty span:first-child { font-size: 1.45rem; line-height: 1.2; }
+    .card {
+      display: grid; grid-template-columns: 68px minmax(0, 1fr); align-items: start; gap: 16px;
+      padding: clamp(16px, 3vw, 24px); border: 1px solid var(--line); border-top: 4px solid #e3b647;
+      border-radius: 22px; background: #fff9e6;
+    }
+    .tile {
+      display: grid; place-items: center; width: 68px; aspect-ratio: 1;
+      border-radius: 17px; background: var(--butter); font-size: 1.65rem;
+    }
+    .tile[data-kind="food"] { background: var(--peach); }
+    .tile[data-kind="art"] { background: var(--mint); }
+    .tag, .count { color: var(--deep); font-size: .78rem; font-weight: 800; }
+    .tag { display: inline-block; padding: 2px 9px; background: var(--butter); border-radius: 999px; }
+    .card:has(.tile[data-kind="food"]) .tag { background: var(--peach); }
+    .card:has(.tile[data-kind="art"]) .tag { background: var(--mint); }
+    h3 { font-size: clamp(1.2rem, 2.6vw, 1.65rem); line-height: 1.28; margin-block: 6px; letter-spacing: -.025em; }
+    .meta { font-size: .85rem; }
+    .description { font-size: .95rem; margin-top: 7px; }
+    .save { grid-column: 1 / -1; min-height: 48px; padding: 8px 12px; border-radius: 14px; }
+    .count { flex: 0 0 auto; padding: 3px 10px; background: var(--butter); border-radius: 999px; }
+    .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 9px; }
+    .list li {
+      display: grid; grid-template-columns: 40px minmax(0, 1fr) auto;
+      align-items: center; gap: 9px; padding: 8px;
+      background: #fffcf1; border: 1px solid var(--line); border-radius: 14px;
+    }
+    .list .tile { width: 40px; border-radius: 10px; font-size: 1.1rem; }
+    .list strong { display: block; font-size: .94rem; line-height: 1.4; }
+    .list .meta, .remove { font-size: .81rem; }
+    .remove { min-width: 44px; border-radius: 10px; padding: 6px 9px; }
+    .foot { font-size: .84rem; padding-bottom: 24px; }
+    .warning { margin-top: 8px; color: #773c33; font-size: .83rem; }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    @media (max-width: 800px) {
+      .wrap { width: calc(100% - 36px); }
+      .grid { grid-template-columns: minmax(0, 1fr); gap: 14px; margin-block: 16px; }
+      .hero { min-height: 210px; }
+    }
+    @media (max-width: 540px) {
+      .wrap { width: calc(100% - 28px); }
+      .top { padding-block: 10px; gap: 8px; }
+      .hero { grid-template-columns: minmax(0, 1fr) clamp(66px, 20vw, 106px); min-height: 0; padding: 20px 16px; border-radius: 24px; }
+      h1 { font-size: clamp(1.65rem, 6.8vw, 2.25rem); margin-bottom: 9px; }
+      .intro { font-size: .9rem; }
+      .intro br { display: none; }
+      .panel { padding: 16px; border-radius: 22px; }
+      .categories { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }
+      .card { grid-template-columns: 48px minmax(0, 1fr); gap: 12px; padding: 14px; }
+      .tile { width: 48px; font-size: 1.3rem; border-radius: 12px; }
+    }
+    @media (max-width: 360px) {
+      .hero { grid-template-columns: minmax(0, 1fr); }
+      .hero svg { display: none; }
+      .list li { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 6px; }
+      .list .tile { width: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap top">
+    <span class="brand">✦ 오늘 어디 가지?</span>
+    <a class="jump" href="#favorites">♡ 즐겨찾기</a>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="title">
+      <div>
+        <p class="eyebrow">오늘의 장소 탐색</p>
+        <h1 id="title">오늘 어디 가지?</h1>
+        <p class="intro">커피 한 잔, 맛있는 한 끼, 전시 한 편.<br> 오늘 기분에 맞는 장소를 찾아보세요.</p>
+      </div>
+      <svg viewBox="0 0 300 190" aria-hidden="true" focusable="false">
+        <ellipse cx="148" cy="167" rx="109" ry="10" fill="#e8ca79"/>
+        <g transform="rotate(-9 146 104)">
+          <path d="M44 48l56-17 58 17 72-17v116l-72 17-58-17-56 17z" fill="#fffdf1" stroke="#cbab57" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M100 31l58 17v116l-58-17z" fill="#fae5a5"/>
+          <path d="M60 125c25-4 18-45 44-36s34 41 57 25 25-32 49-41" fill="none" stroke="#aa782c" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/>
+          <circle cx="60" cy="125" r="5" fill="#d88865"/>
+          <circle cx="210" cy="73" r="5" fill="#779d83"/>
+        </g>
+        <path d="M154 38c-20 0-36 16-36 36 0 26 36 57 36 57s36-31 36-57c0-20-16-36-36-36z" fill="#b47820"/>
+        <circle cx="154" cy="74" r="14" fill="#fff9df"/>
+        <circle cx="241" cy="126" r="22" fill="#fbd7bf" stroke="#fff7e9" stroke-width="3"/>
+        <path d="M241 136l-9-9a5 5 0 017-7l2 2 2-2a5 5 0 017 7z" fill="#a75142"/>
+        <path d="M248 30v20m-10-10h20M33 62v14m-7-7h14M271 81v12m-6-6h12" stroke="#9a651a" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </section>
+
+    <div class="grid">
+      <section class="panel" aria-labelledby="discover-title">
+        <h2 id="discover-title">장소 추천</h2>
+        <p class="sub">카테고리를 고르고 추천 버튼을 눌러 보세요.</p>
+        <div class="categories" id="categories" role="group" aria-label="장소 카테고리">
+          <button class="pill" type="button" data-kind="all" aria-pressed="true">✦ 전체</button>
+          <button class="pill" type="button" data-kind="cafe" aria-pressed="false">☕ 카페</button>
+          <button class="pill" type="button" data-kind="food" aria-pressed="false">🍽️ 맛집</button>
+          <button class="pill" type="button" data-kind="art" aria-pressed="false">🖼️ 전시회</button>
+        </div>
+        <button class="primary" id="recommend" type="button">✦ 장소 추천받기</button>
+        <div id="result"></div>
+      </section>
+
+      <section class="panel" id="favorites" aria-labelledby="favorites-title">
+        <div class="panel-head">
+          <h2 id="favorites-title">즐겨찾기</h2>
+          <span class="count" id="count" aria-label="저장한 장소 0개">0</span>
+        </div>
+        <p class="sub">다시 가보고 싶은 장소를 여기에 모아 두세요.</p>
+        <div id="saved"></div>
+        <p class="warning" id="warning" hidden>이 브라우저에서는 저장이 제한되어 페이지를 닫으면 목록이 사라질 수 있어요.</p>
+      </section>
+    </div>
+    <p class="foot">서울의 장소를 추천해요. 방문 전 운영시간과 전시 일정을 확인해 주세요.</p>
+    <p class="sr" id="status" role="status" aria-atomic="true"></p>
+    <noscript><p class="warning">이 앱을 이용하려면 브라우저에서 JavaScript를 켜 주세요.</p></noscript>
+  </main>
+  <script>
+    (() => {
+      'use strict';
+
+      const types = { cafe: ['카페', '☕'], food: ['맛집', '🍽️'], art: ['전시회', '🖼️'] };
+      // 장소를 추가하려면 [고유 ID, 카테고리, 이름, 지역, 소개] 형식으로 적으세요.
+      const places = [
+        ['onion', 'cafe', '어니언 성수', '성동구 성수동', '옛 공장을 개조한 공간에서 빵과 커피를 즐겨 보세요.'],
+        ['anthracite', 'cafe', '앤트러사이트 합정', '마포구 합정동', '공장의 흔적이 남아 있는 공간에서 원두의 향을 느껴 보세요.'],
+        ['fritz', 'cafe', '프릳츠 도화점', '마포구 도화동', '오래된 주택을 살린 카페에서 커피와 빵을 곁들여 보세요.'],
+        ['center', 'cafe', '센터커피 서울숲점', '성동구 성수동', '서울숲을 산책한 뒤 들러 커피를 마시기 좋아요.'],
+        ['gyoja', 'food', '명동교자 본점', '중구 명동', '진한 국물의 칼국수와 만두로 든든하게 한 끼를 즐겨 보세요.'],
+        ['wooraeok', 'food', '우래옥', '중구 주교동', '고기 육수의 평양냉면이나 불고기가 생각날 때 들러 보세요.'],
+        ['tosokchon', 'food', '토속촌 삼계탕', '종로구 체부동', '경복궁 근처 한옥에서 따뜻한 삼계탕을 맛보세요.'],
+        ['gwangjang', 'food', '광장시장 먹거리 골목', '종로구 예지동', '빈대떡과 김밥 등 시장 음식을 골라 먹는 재미가 있어요.'],
+        ['mmca', 'art', '국립현대미술관 서울', '종로구 소격동', '삼청동 산책에 현대미술 전시 관람을 더해 보세요.'],
+        ['sema', 'art', '서울시립미술관 서소문본관', '중구 서소문동', '덕수궁 돌담길을 걷고 가까운 미술관에서 전시를 만나 보세요.'],
+        ['leeum', 'art', '리움미술관', '용산구 한남동', '한국 고미술과 현대미술을 함께 만날 수 있어요.'],
+        ['ddp', 'art', '동대문디자인플라자(DDP)', '중구 을지로7가', '곡선이 돋보이는 건축을 둘러보고 디자인 전시 일정도 확인해 보세요.']
+      ].map(([id, kind, name, area, description]) => ({ id, kind, name, area, description }));
+
+      const byId = new Map(places.map(place => [place.id, place]));
+      const key = 'today-where-favorites-v1';
+      const favorites = new Set();
+      const get = id => document.getElementById(id);
+      const result = get('result'), saved = get('saved'), count = get('count');
+      const recommend = get('recommend'), warning = get('warning');
+      const categories = [...get('categories').querySelectorAll('button')];
+      let selected = 'all', current = null, lastId = null, saveButton = null;
+
+      try {
+        const ids = JSON.parse(localStorage.getItem(key) || '[]');
+        if (Array.isArray(ids)) ids.filter(id => byId.has(id)).forEach(id => favorites.add(id));
+      } catch {
+        warning.hidden = false;
+      }
+
+      function el(tag, className = '', text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      }
+
+      function makeButton(className, text) {
+        const node = el('button', className, text);
+        node.type = 'button';
+        return node;
+      }
+
+      function icon(className, text) {
+        const node = el('span', className, text);
+        node.setAttribute('aria-hidden', 'true');
+        return node;
+      }
+
+      function empty(symbol, title, hint) {
+        const box = el('div', 'empty');
+        box.append(icon('', symbol), el('strong', '', title), el('span', '', hint));
+        return box;
+      }
+
+      function tile(place) {
+        const node = icon('tile', types[place.kind][1]);
+        node.dataset.kind = place.kind;
+        return node;
+      }
+
+      function announce(message) {
+        get('status').textContent = message;
+      }
+
+      function syncSave() {
+        if (!saveButton || !current) return;
+        const on = favorites.has(current.id);
+        saveButton.textContent = on ? '♥ 즐겨찾기 · 저장됨' : '♡ 즐겨찾기에 추가';
+        saveButton.setAttribute('aria-pressed', String(on));
+        saveButton.setAttribute('aria-label', `${current.name} 즐겨찾기`);
+      }
+
+      function updateFavorite(place, add) {
+        if (add) favorites.add(place.id);
+        else favorites.delete(place.id);
+        try {
+          localStorage.setItem(key, JSON.stringify([...favorites]));
+          warning.hidden = true;
+        } catch {
+          warning.hidden = false;
+        }
+        showFavorites();
+        syncSave();
+        announce(add ? `${place.name}, 즐겨찾기에 추가했어요.` : `${place.name}, 즐겨찾기에서 삭제했어요.`);
+      }
+
+      function showFavorites() {
+        count.textContent = String(favorites.size);
+        count.setAttribute('aria-label', `저장한 장소 ${favorites.size}개`);
+        if (!favorites.size) {
+          saved.replaceChildren(empty('♡', '아직 저장한 장소가 없어요', '추천 카드에서 마음에 드는 장소를 추가해 보세요.'));
+          return;
+        }
+        const list = el('ul', 'list');
+        [...favorites].reverse().forEach((id, index) => {
+          const place = byId.get(id);
+          const item = el('li'), copy = el('div');
+          copy.append(el('strong', '', place.name), el('p', 'meta', `${types[place.kind][0]} · ${place.area}`));
+          const remove = makeButton('remove', '삭제');
+          remove.setAttribute('aria-label', `${place.name} 즐겨찾기 삭제`);
+          remove.addEventListener('click', () => {
+            updateFavorite(place, false);
+            const remaining = saved.querySelectorAll('button');
+            (remaining[Math.min(index, remaining.length - 1)] || saveButton || recommend).focus();
+          });
+          item.append(tile(place), copy, remove);
+          list.append(item);
+        });
+        saved.replaceChildren(list);
+      }
+
+      function showResult() {
+        saveButton = null;
+        if (!current) {
+          const title = selected === 'all' ? '어떤 장소가 나올까요?' : `${types[selected][0]} 추천을 받아볼까요?`;
+          result.replaceChildren(empty('📍', title, '추천 버튼을 누르면 여기에 장소 카드가 나타나요.'));
+          return;
+        }
+        const place = current, card = el('article', 'card'), copy = el('div');
+        copy.append(el('p', 'tag', types[place.kind][0]), el('h3', '', place.name),
+          el('p', 'meta', place.area), el('p', 'description', place.description));
+        saveButton = makeButton('save');
+        syncSave();
+        saveButton.addEventListener('click', () => updateFavorite(place, !favorites.has(place.id)));
+        card.append(tile(place), copy, saveButton);
+        result.replaceChildren(card);
+      }
+
+      categories.forEach(button => button.addEventListener('click', () => {
+        if (selected === button.dataset.kind) return;
+        selected = button.dataset.kind;
+        categories.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        current = null;
+        recommend.textContent = '✦ 장소 추천받기';
+        showResult();
+      }));
+
+      recommend.addEventListener('click', () => {
+        const pool = places.filter(place => selected === 'all' || place.kind === selected);
+        const different = pool.filter(place => place.id !== lastId);
+        const options = different.length ? different : pool;
+        if (!options.length) {
+          result.replaceChildren(empty('📍', '추천할 장소가 아직 없어요', '다른 카테고리를 선택해 보세요.'));
+          return;
+        }
+        current = options[Math.floor(Math.random() * options.length)];
+        lastId = current.id;
+        recommend.textContent = '✦ 다른 장소 추천받기';
+        showResult();
+        announce(`추천 장소: ${current.name}, ${types[current.kind][0]}, ${current.area}`);
+      });
+
+      showResult();
+      showFavorites();
+    })();
+  </script>
+</body>
+</html>
